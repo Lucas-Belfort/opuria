@@ -72,8 +72,9 @@ function App() {
 
     if (cepLimpo.length === 8) {
       try {
-        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-        const data = await response.json();
+        // CORRIGIDO: Voltando para o link original do ViaCEP
+        const resposta = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+        const data = await resposta.json();
         
         if (!data.erro) {
           setCliente(prev => ({ 
@@ -91,7 +92,8 @@ function App() {
   };
 
   const handleBuy = async () => {
-    const response = await fetch('http://localhost:3000/criar-preferencia', {
+    // CORRIGIDO: Link apontando para a sua API na Render
+    const response = await fetch('https://opuria-backend-x8z9.onrender.com/criar-preferencia', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: carrinho }),
@@ -208,7 +210,7 @@ function App() {
               </>
             )}
 
-{/* --- PASSO 2: DADOS DE ENTREGA --- */}
+            {/* --- PASSO 2: DADOS DE ENTREGA --- */}
             {passo === 2 && (
               <>
                 <div className="checkout-form">
@@ -246,7 +248,6 @@ function App() {
                   </div>
                 </div>
 
-                {/* Agora o footer está do lado de fora do checkout-form! */}
                 <div className="modal-footer">
                   <button className="back-btn" onClick={() => setPasso(1)}>⬅ Voltar</button>
                   <button className="pay-btn" onClick={() => {
