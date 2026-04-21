@@ -151,6 +151,22 @@ function App() {
           </div>
         </div>
       </section>
+      
+            {/* --- SOBRE NÓS RESTAURADO --- */}
+      <section className="about-section" id="sobre">
+        <div className="about-content">
+          <div className="about-image">
+            <img src="/quemsomos.jpeg" alt="Nossa oficina" />
+          </div>
+          <div className="about-text">
+            <h2>Quem Somos</h2>
+            <p>
+              Muito prazer sou a Julia, Dona e fundadora da opuria. Comecei a fazer cerâmica em 2019, durante a faculdade, e desde então nunca mais parei. O que começou como aprendizado logo se transformou em paixão — e hoje também é o meu trabalho. Nas minhas peças, busco expressar a forma como vejo o mundo: belo, místico e ritualístico. Cada objeto nasce das minhas mãos carregando intenção, sensibilidade e a singularidade do processo artesanal.
+            </p>
+          </div>
+        </div>
+      </section>
+
 
       {/* VITRINE DINÂMICA LIGADA AO FIREBASE */}
       <main className="main-content" id="galeria">
@@ -291,20 +307,6 @@ function App() {
         </div>
       )}
 
-      {/* --- SOBRE NÓS RESTAURADO --- */}
-      <section className="about-section" id="sobre">
-        <div className="about-content">
-          <div className="about-image">
-            <img src="/quemsomos.jpeg" alt="Nossa oficina" />
-          </div>
-          <div className="about-text">
-            <h2>Quem Somos</h2>
-            <p>
-              Muito prazer sou a Julia, Dona e fundadora da opuria. Comecei a fazer cerâmica em 2019, durante a faculdade, e desde então nunca mais parei. O que começou como aprendizado logo se transformou em paixão — e hoje também é o meu trabalho. Nas minhas peças, busco expressar a forma como vejo o mundo: belo, místico e ritualístico. Cada objeto nasce das minhas mãos carregando intenção, sensibilidade e a singularidade do processo artesanal.
-            </p>
-          </div>
-        </div>
-      </section>
 
       <footer className="footer" id="contato">
         <p>© 2026 Opuria Cerâmicas.</p>
