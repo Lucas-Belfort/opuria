@@ -4,7 +4,7 @@ import './App.css';
 import { db } from './firebase';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 
-// --- INICIALIZAÇÃO ---
+// --- INICIALIZAÇÃO DO MERCADO PAGO ---
 initMercadoPago('APP_USR-c713c26a-d6e9-4d5e-944e-cbc429d4fe82', { locale: 'pt-BR' });
 
 function App() {
@@ -111,18 +111,54 @@ function App() {
 
   return (
     <div className="container">
-      <header className="header">
+      <header className="header" id="home">
         <div className="logo-container">
-          <img src="/logo.png" alt="Opuria" className="logo-img" />
+          <img src="/logo.png" alt="Logo Opuria" className="logo-img" />
           <h1>Opuria Cerâmicas</h1>
         </div>
+        <nav>
+          <ul>
+            <li><a href="#home">Início</a></li>
+            <li><a href="#sobre">Sobre Nós</a></li>
+            <li><a href="#galeria">Galeria</a></li>
+          </ul>
+        </nav>
       </header>
 
-      {/* VITRINE DINÂMICA */}
-      <main className="main-content">
+      {/* --- BANNER CAROUSEL RESTAURADO --- */}
+      <section className="banner-carousel">
+        <div className="slide-container">
+          <div className="slide slide-1">
+            <img src="/b1.jpeg" alt="Vaso artesanal Opuria" />
+            <div className="slide-text">
+              <h2>Textura Única</h2>
+              <p>Peças moldadas com carinho e alma.</p>
+            </div>
+          </div>
+          <div className="slide slide-2">
+            <img src="/fpt.png" alt="Conjunto de cerâmica na mesa" />
+            <div className="slide-text">
+              <h2>PROMOÇÃO DE COLECIONADOR DIA DAS BRUXAS </h2>
+              <p>HAHAHAHAHAHAHAHAHA</p>
+            </div>
+          </div>
+          <div className="slide slide-3">
+            <img src="/b2.jpeg" alt="Processo de queima artesanal" />
+            <div className="slide-text">
+              <h2>Coleção de gay lgbt</h2>
+              <p>opuria é tudo todo e todes.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* VITRINE DINÂMICA LIGADA AO FIREBASE */}
+      <main className="main-content" id="galeria">
         <h2>Nossas Peças</h2>
+        <p className="subtitle">Feitas à mão, com tempo e carinho.</p>
+        
         {carregando ? (
-          <p>Carregando peças artesanais...</p>
+          <p className="loading-text">Carregando peças artesanais...</p>
         ) : (
           <div className="product-grid">
             {produtos.map((p) => (
@@ -130,9 +166,10 @@ function App() {
                 <img src={p.imagem} alt={p.nome} />
                 <div className="product-info">
                   <h3>{p.nome}</h3>
+                  <p className="desc">{p.descricao}</p>
                   <p className="price">R$ {p.preco.replace('.', ',')}</p>
                   <button className="buy-btn" onClick={() => adicionarAoCarrinho(p)}>
-                    Adicionar
+                    Adicionar ao Carrinho
                   </button>
                 </div>
               </div>
@@ -144,8 +181,13 @@ function App() {
       {/* BARRA DO CARRINHO */}
       {carrinho.length > 0 && (
         <div className="cart-bar">
-          <span>🛒 {carrinho.length} item(s) - R$ {calcularTotal().replace('.', ',')}</span>
-          <button className="checkout-btn" onClick={() => setIsModalOpen(true)}>Finalizar</button>
+          <div className="cart-info">
+            <span>🛒 {carrinho.length} item(s) no carrinho</span>
+            <span className="cart-total">Total: R$ {calcularTotal().replace('.', ',')}</span>
+          </div>
+          <button className="checkout-btn" onClick={() => setIsModalOpen(true)}>
+            Ver Pedido
+          </button>
         </div>
       )}
 
@@ -153,45 +195,120 @@ function App() {
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <button className="close-btn" onClick={() => setIsModalOpen(false)}>✖</button>
+            <div className="modal-header">
+              <h2>{passo === 1 ? "Seu Carrinho" : passo === 2 ? "Dados de Entrega" : "Pagamento Seguro"}</h2>
+              <button className="close-btn" onClick={() => { setIsModalOpen(false); setPasso(1); }}>✖</button>
+            </div>
             
+            {/* PASSO 1 */}
             {passo === 1 && (
-              <div className="step">
-                <h3>Seu Carrinho</h3>
-                {carrinho.map((item, i) => (
-                  <div key={i} className="cart-item-row">
-                    <span>{item.nome}</span>
-                    <button onClick={() => removerDoCarrinho(i)}>remover</button>
-                  </div>
-                ))}
-                <button className="pay-btn" onClick={() => setPasso(2)}>Próximo: Entrega</button>
-              </div>
+              <>
+                <ul className="cart-items-list">
+                  {carrinho.map((item, index) => (
+                    <li key={index} className="cart-item">
+                      <img src={item.imagem} alt={item.nome} className="cart-item-img" />
+                      <div className="cart-item-info">
+                        <h4>{item.nome}</h4>
+                        <p>R$ {item.preco.replace('.', ',')}</p>
+                      </div>
+                      <button className="remove-btn" onClick={() => removerDoCarrinho(index)}>Remover</button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="modal-footer">
+                  <h3>Total: R$ {calcularTotal().replace('.', ',')}</h3>
+                  <button className="pay-btn" onClick={() => setPasso(2)}>Continuar para Entrega ➔</button>
+                </div>
+              </>
             )}
 
+            {/* PASSO 2 */}
             {passo === 2 && (
-              <div className="step checkout-form">
-                <h3>Entrega</h3>
-                <input placeholder="Nome" onChange={e => setCliente({...cliente, nome: e.target.value})} />
-                <input placeholder="CEP" maxLength="9" onChange={e => buscarCEP(e.target.value)} />
-                <input placeholder="Rua" value={cliente.rua} readOnly />
-                <input placeholder="Número" onChange={e => setCliente({...cliente, numero: e.target.value})} />
-                <button className="pay-btn" onClick={finalizarPedido}>Ir para Pagamento</button>
-              </div>
+              <>
+                <div className="checkout-form">
+                  <p className="security-badge">🔒 Seus dados estão criptografados e seguros.</p>
+                  <input 
+                    type="text" placeholder="Nome Completo" value={cliente.nome}
+                    onChange={(e) => setCliente({ ...cliente, nome: e.target.value })}
+                  />
+                  <input 
+                    type="text" placeholder="WhatsApp (Ex: 11 99999-9999)" value={cliente.whatsapp}
+                    onChange={(e) => setCliente({ ...cliente, whatsapp: e.target.value })}
+                  />
+                  
+                  <h4 className="form-subtitle">Endereço de Envio</h4>
+                  <div className="address-grid">
+                    <input 
+                      type="text" placeholder="CEP" value={cliente.cep} maxLength="9"
+                      onChange={(e) => buscarCEP(e.target.value)}
+                    />
+                    <input 
+                      type="text" placeholder="Rua" value={cliente.rua}
+                      onChange={(e) => setCliente({ ...cliente, rua: e.target.value })}
+                    />
+                    <input 
+                      type="text" placeholder="Número" value={cliente.numero}
+                      onChange={(e) => setCliente({ ...cliente, numero: e.target.value })}
+                    />
+                    <input 
+                      type="text" placeholder="Bairro" value={cliente.bairro}
+                      onChange={(e) => setCliente({ ...cliente, bairro: e.target.value })}
+                    />
+                    <input 
+                      type="text" placeholder="Cidade / UF" value={`${cliente.cidade} ${cliente.uf ? '- ' + cliente.uf : ''}`} disabled
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <button className="back-btn" onClick={() => setPasso(1)}>⬅ Voltar</button>
+                  <button className="pay-btn" onClick={() => {
+                    if (!cliente.nome || !cliente.cep || !cliente.numero) {
+                      alert("Preencha os campos obrigatórios (Nome, CEP e Número) para entrega!");
+                      return;
+                    }
+                    finalizarPedido(); 
+                  }}>Ir para Pagamento ➔</button>
+                </div>
+              </>
             )}
 
+            {/* PASSO 3 */}
             {passo === 3 && (
-              <div className="step">
-                <h3>Pagamento</h3>
-                {preferenceId ? (
-                  <Wallet initialization={{ preferenceId }} />
-                ) : (
-                  <p>Gerando PIX/Cartão...</p>
-                )}
+              <div className="payment-step">
+                <p className="payment-resume">Valor a pagar: <strong>R$ {calcularTotal().replace('.', ',')}</strong></p>
+                <div className="modal-footer">
+                  <button className="back-btn" onClick={() => setPasso(2)}>⬅ Voltar aos Dados</button>
+                  {preferenceId ? (
+                    <Wallet initialization={{ preferenceId: preferenceId }} customization={{ texts:{ valueProp: 'smart_option'}}} />
+                  ) : (
+                    <p className="loading-text">Carregando ambiente seguro do Mercado Pago...</p>
+                  )}
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
+
+      {/* --- SOBRE NÓS RESTAURADO --- */}
+      <section className="about-section" id="sobre">
+        <div className="about-content">
+          <div className="about-image">
+            <img src="/quemsomos.jpeg" alt="Nossa oficina" />
+          </div>
+          <div className="about-text">
+            <h2>Quem Somos</h2>
+            <p>
+              Muito prazer sou a Julia, Dona e fundadora da opuria. Comecei a fazer cerâmica em 2019, durante a faculdade, e desde então nunca mais parei. O que começou como aprendizado logo se transformou em paixão — e hoje também é o meu trabalho. Nas minhas peças, busco expressar a forma como vejo o mundo: belo, místico e ritualístico. Cada objeto nasce das minhas mãos carregando intenção, sensibilidade e a singularidade do processo artesanal.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <footer className="footer" id="contato">
+        <p>© 2026 Opuria Cerâmicas.</p>
+      </footer>
     </div>
   );
 }
