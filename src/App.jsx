@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 import './App.css';
-import { db } from './firebase';
+import { db } from './firebase'; 
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 
 // --- INICIALIZAÇÃO DO MERCADO PAGO ---
@@ -23,22 +23,28 @@ function App() {
     nome: '', whatsapp: '', cep: '', rua: '', numero: '', bairro: '', cidade: '', uf: '' 
   });
 
+  // --- ESTADOS DO PAINEL DA JÚLIA (100% GRATUITO) ---
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [novoProduto, setNovoProduto] = useState({ nome: '', preco: '', descricao: '', imagemUrl: '' });
+  const [salvandoProduto, setSalvandoProduto] = useState(false);
+
   // --- 1. BUSCAR PRODUTOS DO FIREBASE ---
+  const carregarLoja = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "produtos"));
+      const lista = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setProdutos(lista);
+    } catch (error) {
+      console.error("Erro ao carregar produtos:", error);
+    } finally {
+      setCarregando(false);
+    }
+  };
+
   useEffect(() => {
-    const carregarLoja = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "produtos"));
-        const lista = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setProdutos(lista);
-      } catch (error) {
-        console.error("Erro ao carregar produtos:", error);
-      } finally {
-        setCarregando(false);
-      }
-    };
     carregarLoja();
   }, []);
 
@@ -69,11 +75,7 @@ function App() {
         const data = await res.json();
         if (!data.erro) {
           setCliente(prev => ({
-            ...prev,
-            rua: data.logradouro,
-            bairro: data.bairro,
-            cidade: data.localidade,
-            uf: data.uf
+            ...prev, rua: data.logradouro, bairro: data.bairro, cidade: data.localidade, uf: data.uf
           }));
         }
       } catch (err) {
@@ -85,18 +87,10 @@ function App() {
   // --- 4. PAGAMENTO E FIREBASE ---
   const finalizarPedido = async () => {
     try {
-      // Salva no banco primeiro
-      const pedidoRef = await addDoc(collection(db, "pedidos"), {
-        cliente,
-        itens: carrinho,
-        total: calcularTotal(),
-        data: new Date().toISOString(),
-        status: "Pendente"
+      await addDoc(collection(db, "pedidos"), {
+        cliente, itens: carrinho, total: calcularTotal(), data: new Date().toISOString(), status: "Pendente"
       });
-
-      setPasso(3); // Vai para tela de pagamento
-
-      // Chama seu servidor na Render
+      setPasso(3); 
       const res = await fetch('https://opuria-backend-x8z9.onrender.com/criar-preferencia', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,6 +100,37 @@ function App() {
       setPreferenceId(data.id);
     } catch (err) {
       alert("Erro ao processar pedido. Tente novamente.");
+    }
+  };
+
+  // --- 5. FUNÇÃO DA JÚLIA: SALVAR NOVO PRODUTO VIA LINK ---
+  const handleSalvarProduto = async (e) => {
+    e.preventDefault();
+    if (!novoProduto.imagemUrl || !novoProduto.nome || !novoProduto.preco) {
+      alert("Preencha todos os campos e cole o link da foto!");
+      return;
+    }
+    setSalvandoProduto(true);
+
+    try {
+      // Salva direto no banco usando o link colado
+      await addDoc(collection(db, "produtos"), {
+        nome: novoProduto.nome,
+        preco: novoProduto.preco.replace(',', '.'), 
+        descricao: novoProduto.descricao,
+        imagem: novoProduto.imagemUrl
+      });
+
+      alert("Produto cadastrado com sucesso na Vitrine!");
+      setIsAdminOpen(false); 
+      setNovoProduto({ nome: '', preco: '', descricao: '', imagemUrl: '' }); 
+      carregarLoja(); 
+      
+    } catch (error) {
+      console.error("Erro ao salvar produto:", error);
+      alert("Erro ao subir o produto. Tente novamente.");
+    } finally {
+      setSalvandoProduto(false);
     }
   };
 
@@ -125,7 +150,7 @@ function App() {
         </nav>
       </header>
 
-      {/* --- BANNER CAROUSEL RESTAURADO --- */}
+      {/* --- BANNER CAROUSEL --- */}
       <section className="banner-carousel">
         <div className="slide-container">
           <div className="slide slide-1">
@@ -151,24 +176,8 @@ function App() {
           </div>
         </div>
       </section>
-      
-            {/* --- SOBRE NÓS RESTAURADO --- */}
-      <section className="about-section" id="sobre">
-        <div className="about-content">
-          <div className="about-image">
-            <img src="/quemsomos.jpeg" alt="Nossa oficina" />
-          </div>
-          <div className="about-text">
-            <h2>Quem Somos</h2>
-            <p>
-              Muito prazer sou a Julia, Dona e fundadora da opuria. Comecei a fazer cerâmica em 2019, durante a faculdade, e desde então nunca mais parei. O que começou como aprendizado logo se transformou em paixão — e hoje também é o meu trabalho. Nas minhas peças, busco expressar a forma como vejo o mundo: belo, místico e ritualístico. Cada objeto nasce das minhas mãos carregando intenção, sensibilidade e a singularidade do processo artesanal.
-            </p>
-          </div>
-        </div>
-      </section>
 
-
-      {/* VITRINE DINÂMICA LIGADA AO FIREBASE */}
+      {/* VITRINE DINÂMICA */}
       <main className="main-content" id="galeria">
         <h2>Nossas Peças</h2>
         <p className="subtitle">Feitas à mão, com tempo e carinho.</p>
@@ -207,16 +216,15 @@ function App() {
         </div>
       )}
 
-      {/* MODAL DE CHECKOUT 3 PASSOS */}
+      {/* MODAL DE CHECKOUT */}
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <div className="modal-header">
+             <div className="modal-header">
               <h2>{passo === 1 ? "Seu Carrinho" : passo === 2 ? "Dados de Entrega" : "Pagamento Seguro"}</h2>
               <button className="close-btn" onClick={() => { setIsModalOpen(false); setPasso(1); }}>✖</button>
             </div>
             
-            {/* PASSO 1 */}
             {passo === 1 && (
               <>
                 <ul className="cart-items-list">
@@ -238,49 +246,26 @@ function App() {
               </>
             )}
 
-            {/* PASSO 2 */}
             {passo === 2 && (
               <>
                 <div className="checkout-form">
                   <p className="security-badge">🔒 Seus dados estão criptografados e seguros.</p>
-                  <input 
-                    type="text" placeholder="Nome Completo" value={cliente.nome}
-                    onChange={(e) => setCliente({ ...cliente, nome: e.target.value })}
-                  />
-                  <input 
-                    type="text" placeholder="WhatsApp (Ex: 11 99999-9999)" value={cliente.whatsapp}
-                    onChange={(e) => setCliente({ ...cliente, whatsapp: e.target.value })}
-                  />
-                  
+                  <input type="text" placeholder="Nome Completo" value={cliente.nome} onChange={(e) => setCliente({ ...cliente, nome: e.target.value })} />
+                  <input type="text" placeholder="WhatsApp (Ex: 11 99999-9999)" value={cliente.whatsapp} onChange={(e) => setCliente({ ...cliente, whatsapp: e.target.value })} />
                   <h4 className="form-subtitle">Endereço de Envio</h4>
                   <div className="address-grid">
-                    <input 
-                      type="text" placeholder="CEP" value={cliente.cep} maxLength="9"
-                      onChange={(e) => buscarCEP(e.target.value)}
-                    />
-                    <input 
-                      type="text" placeholder="Rua" value={cliente.rua}
-                      onChange={(e) => setCliente({ ...cliente, rua: e.target.value })}
-                    />
-                    <input 
-                      type="text" placeholder="Número" value={cliente.numero}
-                      onChange={(e) => setCliente({ ...cliente, numero: e.target.value })}
-                    />
-                    <input 
-                      type="text" placeholder="Bairro" value={cliente.bairro}
-                      onChange={(e) => setCliente({ ...cliente, bairro: e.target.value })}
-                    />
-                    <input 
-                      type="text" placeholder="Cidade / UF" value={`${cliente.cidade} ${cliente.uf ? '- ' + cliente.uf : ''}`} disabled
-                    />
+                    <input type="text" placeholder="CEP" value={cliente.cep} maxLength="9" onChange={(e) => buscarCEP(e.target.value)} />
+                    <input type="text" placeholder="Rua" value={cliente.rua} onChange={(e) => setCliente({ ...cliente, rua: e.target.value })} />
+                    <input type="text" placeholder="Número" value={cliente.numero} onChange={(e) => setCliente({ ...cliente, numero: e.target.value })} />
+                    <input type="text" placeholder="Bairro" value={cliente.bairro} onChange={(e) => setCliente({ ...cliente, bairro: e.target.value })} />
+                    <input type="text" placeholder="Cidade / UF" value={`${cliente.cidade} ${cliente.uf ? '- ' + cliente.uf : ''}`} disabled />
                   </div>
                 </div>
-
                 <div className="modal-footer">
                   <button className="back-btn" onClick={() => setPasso(1)}>⬅ Voltar</button>
                   <button className="pay-btn" onClick={() => {
                     if (!cliente.nome || !cliente.cep || !cliente.numero) {
-                      alert("Preencha os campos obrigatórios (Nome, CEP e Número) para entrega!");
+                      alert("Preencha os campos obrigatórios!");
                       return;
                     }
                     finalizarPedido(); 
@@ -289,7 +274,6 @@ function App() {
               </>
             )}
 
-            {/* PASSO 3 */}
             {passo === 3 && (
               <div className="payment-step">
                 <p className="payment-resume">Valor a pagar: <strong>R$ {calcularTotal().replace('.', ',')}</strong></p>
@@ -307,9 +291,67 @@ function App() {
         </div>
       )}
 
+      {/* --- PAINEL ADMINISTRATIVO DA JÚLIA --- */}
+      {isAdminOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ border: '3px solid #b76e79' }}>
+            <div className="modal-header">
+              <h2>✏️ Adicionar à Vitrine</h2>
+              <button className="close-btn" onClick={() => setIsAdminOpen(false)}>✖</button>
+            </div>
+            <form className="checkout-form" onSubmit={handleSalvarProduto}>
+              <p style={{textAlign: 'center', marginBottom: '15px', fontSize: '14px'}}>
+                1. Suba a foto no <strong>postimages.org</strong><br/>2. Copie o "Link Direto"<br/>3. Cole abaixo.
+              </p>
+              
+              <input 
+                type="text" placeholder="Cole o Link Direto da Foto aqui..." 
+                value={novoProduto.imagemUrl} onChange={(e) => setNovoProduto({...novoProduto, imagemUrl: e.target.value})} 
+                style={{ border: '2px solid #b76e79', backgroundColor: '#fff9fa' }}
+              />
+              <input 
+                type="text" placeholder="Nome da Peça (ex: Vaso Lua)" 
+                value={novoProduto.nome} onChange={(e) => setNovoProduto({...novoProduto, nome: e.target.value})} 
+              />
+              <input 
+                type="number" step="0.01" placeholder="Preço (ex: 150.00)" 
+                value={novoProduto.preco} onChange={(e) => setNovoProduto({...novoProduto, preco: e.target.value})} 
+              />
+              <input 
+                type="text" placeholder="Breve Descrição" 
+                value={novoProduto.descricao} onChange={(e) => setNovoProduto({...novoProduto, descricao: e.target.value})} 
+              />
+              <button type="submit" className="pay-btn" disabled={salvandoProduto} style={{ width: '100%', marginTop: '15px' }}>
+                {salvandoProduto ? "Salvando..." : "Salvar Produto na Loja ➔"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <section className="about-section" id="sobre">
+        <div className="about-content">
+          <div className="about-image">
+            <img src="/quemsomos.jpeg" alt="Nossa oficina" />
+          </div>
+          <div className="about-text">
+            <h2>Quem Somos</h2>
+            <p>
+              Muito prazer sou a Julia, Dona e fundadora da opuria. Comecei a fazer cerâmica em 2019, durante a faculdade, e desde então nunca mais parei. O que começou como aprendizado logo se transformou em paixão — e hoje também é o meu trabalho. Nas minhas peças, busco expressar a forma como vejo o mundo: belo, místico e ritualístico. Cada objeto nasce das minhas mãos carregando intenção, sensibilidade e a singularidade do processo artesanal.
+            </p>
+          </div>
+        </div>
+      </section>
 
       <footer className="footer" id="contato">
-        <p>© 2026 Opuria Cerâmicas.</p>
+        <p>© 2026 Opuria Cerâmicas. 
+          <button 
+            onClick={() => setIsAdminOpen(true)} 
+            style={{background: 'none', border: 'none', color: '#666', textDecoration: 'underline', cursor: 'pointer', marginLeft: '10px'}}
+          >
+            Área da Júlia
+          </button>
+        </p>
       </footer>
     </div>
   );
